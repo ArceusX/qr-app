@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR App</title>
+    <!-- Another good library: https://github.com/neocotic/qrious-->
+    <!-- https://github.com/davidshimjs/qrcodejs-->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+    <!-- https://github.com/cozmo/jsQR-->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@latest/dist/jsQR.min.js"></script>
+
+    <style>
+        * {
+            font-family: Helvetica, Arial, sans-serif;
+            margin: 8px;
+            letter-spacing: 1.75px;
+            border-radius: 4px;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h2 {
+            font-style: italic;
+            color: #F8D030;
+            margin-bottom: 12px;
+        }
+        textarea {
+            resize: none;
+        }
+
+        #correct-level, option {
+            width: 125px;
+            height: 22.5px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        #en-de-container {
+            display: flex;
+            gap: 30px;
+        }
+
+        #encode-container, #decode-container {
+            width: 600px;
+            padding: .75em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid #ccc;
+        }
+        #text-en-container, #text-de-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+        }
+        #encode-title, #decode-title, .item-title {
+            margin: 0;
+            padding: 5px;
+            width: 100%;
+            height: 2.8em;
+            border: none;
+            text-align: center;
+            font-style: italic;
+            font-size: 1em;
+            color: blue;
+        }
+        #encode-text, #decode-text {
+            padding: 10px;
+            height : 100%;
+            width  : 100%;
+            font-size: 18px;
+            color: green;
+        }
+        #encode-btn, #save-btn, #clear-all-btn {
+            width: 240px;
+            margin-bottom: -1px;
+            padding: 5px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            background-image: linear-gradient(#7febc9, #9fb8f7);
+            border: none;
+        }
+        #save-btn {
+            background-image: linear-gradient(#a7d0fc, #aa8bf2);
+        }
+        #clear-all-btn {
+            width: 300px;
+            background-image: linear-gradient(#f3f987, #f9b695);
+        }
+
+        #decode-img {
+            cursor: pointer;
+        }
+        #decode-input {
+            display: none;
+        }
+
+        #codes-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-evenly;
+            width: 1270px;
+            padding: 1em;
+            border: 2px solid #ccc;
+        }
+        #canvas {
+            display: none;
+        }
+        
+        .qr-item {
+            border: 1px solid #7e7e7e;
+            padding: 10px;
+            position: relative;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            width: 380px;
+            height: 380px;
+        }
+        .qr-item > * {
+            width: 100%;
+            padding: 0;
+        }
+        .qr-item > input[type="text"] {
+            margin-bottom: 0;
+            width: 360px;
+            height: 2em;
+            overflow: hidden;
+            text-decoration: underline;
+        }
+        .qr-item > textarea {
+            height: 3.25em;
+            margin-top: 10px;
+            margin-bottom: 30px;
+            border: none;
+            outline: none;
+            line-height: 18px;
+            font-size: 1em;
+            margin-bottom: 0;
+            color: green;
+        }
+        .qr-item > button {
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 2em;
+            height: 2em;
+            font-size: 2em;
+            text-align: center;
+            color: red;
+            border: none;
+            background-color: transparent; 
+            cursor: pointer;
+        }
+
+        /* div made to look like img in order to allow use with qrcode library*/
+        .img {
+            width: 250px;
+            height: 250px;
+            background-image: url('https://placeholder.com/250x250/fbc2b8/ffffff');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border: none;
+            display: flex; /* With align-items, center content in frame (ie .img)*/
+            align-items: center;
+            border-radius: 0;
+        }
+        img {
+            width : 250px;
+            height: 250px;
+            object-fit: contain; 
+            border-radius: 0;
+        }
+    </style>
+</head>
+<body>
+    <h2>QR App</h2>
+
+    <div>
+        <label for="correct-level" title="Assurance inflates file size">Correction Level</label>
+        <select id="correct-level">
+            <option value="L">L (7%)</option>
+            <option value="M" selected>M (15%)</option>
+            <option value="Q">Q (25%)</option>
+            <option value="H">H (30%)</option>
+        </select>
+    </div>
+
+    <div id="en-de-container">
+        <div id="encode-container">
+            <div id="text-en-container">
+                <textarea id="encode-title" placeholder="Title"></textarea>
+                <textarea id="encode-text" placeholder="Content is saved"></textarea>
+                <button   id="encode-btn" onclick="encode()">Encode</button>
+            </div>
+            <div id="encode-img" class="img"></div>
+        </div>
+
+        <div id="decode-container">
+            <input id="decode-input" type="file">
+            <canvas id="decode-img" class="img"></canvas>
+            <div id="text-de-container">
+                <textarea id="decode-title" placeholder="Title"></textarea>
+                <textarea id="decode-text" placeholder="Load file to decode" readonly></textarea>
+                <button id="save-btn" onclick="save()">Save</button>
+            </div>
+        </div>
+    </div>
+    <br>
+    <button id="clear-all-btn" onclick="clearAll()">&times;&emsp;Clear All&emsp;&times;</button>
+    <div id="codes-container">
+        <canvas id="canvas" width="250" height="250"></canvas>
+    </div>
+    <script>
+        // With qrcode library, encode text and put result into #encode-img
+        // Copy content of #encode-container onto item in #codes-container
+        function encode() {
+            const container = document.getElementById('encode-container');
+            const encodeText = container.querySelector('#encode-text');
+            const text = encodeText.value.trim();
+            if (text) {
+                const encodeImg = container.querySelector('#encode-img');
+                encodeImg.innerHTML = '';
+                encodeImg.style.backgroundImage = 'none';
+
+                const correctLevel = document.getElementById('correct-level');
+
+                const qrCode = new QRCode(encodeImg, {
+                    text: text,
+                    width: 250,
+                    height: 250,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    // https://www.qrcode.com/en/about/error_correction.html
+                    correctLevel : getCorrectConstant(correctLevel.value)
+                });
+
+                // Revert qrcode library's unhelpful attempt to set title to text
+                encodeImg.removeAttribute('title');
+
+                const encodeTitle = container.querySelector('#encode-title');
+                const qrImg = encodeImg.querySelector('img');
+                copyQRItem(
+                    encodeTitle, text, qrImg,
+                    document.getElementById('codes-container'));
+            }
+        }
+
+        // Upload steps: decode() and put result in #decode-text  
+        function setupUpload() {
+            // All elements used reside in #decode-container; need only search there
+            let container   = document.getElementById('decode-container');
+            let decodeInput = container.querySelector('#decode-input');
+            let decodeImg   = container.querySelector('#decode-img');
+            decodeInput.addEventListener('change', async () => {
+                const decodeText = container.querySelector('#decode-text');
+                try {
+                    const result = await decode(decodeImg);
+                    decodeText.value = result;
+                }
+                catch (error) {
+                    decodeText.value = "";
+                }
+            });
+            decodeImg.addEventListener('click', () => decodeInput.click());
+        }
+
+        // With jsQR library, decode code image. setupUpload(), which
+        // calls this function, will insert result into #decode-text
+        function decode(canvas) {
+            return new Promise((resolve, reject) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = new Image();
+                        img.onload = function() {
+                            const context = canvas.getContext('2d');
+                            canvas.width  = img.width;
+                            canvas.height = img.height;
+                            context.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+                            if (code) resolve(code.data);
+                            else      reject(new Error());
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                } 
+                else reject(new Error());
+            });
+        }
+
+        // Does like encode() to copy content onto item in
+        // #codes-container, except of #decode-container rather                 
+        function save() {
+            let container = document.getElementById('decode-container');
+            let decodeTitle = container.querySelector('#decode-title');
+            let decodeText = container.querySelector('#decode-text');
+            let decodeImg = container.querySelector('#decode-img');
+
+            copyQRItem(
+                decodeTitle, decodeText.value.trim(), decodeImg,
+                document.getElementById('codes-container'));
+        }
+
+        // In (parent) code item element, add button to clear item 
+        function addClearButton(parent) {
+            const clearBtn = document.createElement("button");
+            clearBtn.innerHTML = '&times;'; // X. CSS sets it red
+            clearBtn.addEventListener('click', () => {
+                parent.remove();
+            });
+
+            parent.append(clearBtn);
+        }
+
+        function clearAll() {
+            // Must be static array for changes to execute correctly
+            const qrItems = Array.from(document.getElementsByClassName('qr-item'));
+            for (const item of qrItems) {
+                item.remove();
+            }
+        }
+
+        // Copy img/canvas content into item in #codes-container
+        // If <canvas>, copy directly. If <img>, must redraw
+        // img into canvas, then copy from canvas into newImg
+        async function copyImg(img) {
+            const newImg = document.createElement('img');
+
+            if (img.tagName === 'IMG') {
+                // Canvas modifies pixels as needed for copying
+                const canvas = document.getElementById('canvas');
+                const ctx    = canvas.getContext('2d');
+
+                // Resolve problem to arises from img not being ready
+                await new Promise((resolve, reject) => {
+                    img.onload = () => resolve();
+                    img.onerror = () => reject(new Error());
+                });
+
+                ctx.drawImage(img, 0, 0);
+                newImg.src = canvas.toDataURL('image/png');
+            }
+            else {
+                newImg.src = img.toDataURL('image/png');
+            }
+
+            return newImg;
+        }
+
+        // Copy non-empty title element, text, img/canvas element 
+        // onto new item in container. Add clear button
+        async function copyQRItem(title, text, img, container) {
+            const qrItem     = document.createElement('div');
+            qrItem.classList = "qr-item";
+            let titleVal = title.value.trim();
+            if (titleVal) {
+                const input = document.createElement('input');
+                input.classList = "item-title";
+                input.type = "text";
+                input.value = title.value;
+                qrItem.append(input);
+            }
+
+            const textArea = document.createElement('textarea');
+            textArea.textContent = text;
+            textArea.readOnly = true;
+            qrItem.append(textArea);
+
+            let newImg = await copyImg(img);
+            qrItem.append(newImg);
+            addClearButton(qrItem);
+            container.append(qrItem);
+        }
+
+        // Insert each JSON entry into element; add those elements
+        // and clear button into qr item; add item to container
+        function addQRItem(jsonItem, container) {
+            const qrItem = document.createElement('div');
+            qrItem.classList = "qr-item";
+
+            const title = jsonItem["title"];
+            if (title) {
+                const input = document.createElement('input');
+                input.classList = "item-title";
+                input.type = "text";
+                input.value = title;
+                qrItem.append(input);
+            }
+
+            const text = document.createElement('textarea');
+            text.textContent = jsonItem["text"];
+            text.readOnly = true;
+            qrItem.append(text);
+
+            const img = document.createElement('img');
+            img.src = jsonItem["img"];
+            qrItem.append(img);
+
+            addClearButton(qrItem);
+
+            container.append(qrItem);
+        }
+
+        // Interpret select option value as option set by qrcode library
+        function getCorrectConstant(level) {
+            switch (level) {
+                case "L":
+                    return QRCode.CorrectLevel.L;
+                case "M":
+                    return QRCode.CorrectLevel.M;
+                case "Q":
+                    return QRCode.CorrectLevel.Q;
+                default:
+                    return QRCode.CorrectLevel.H;
+            }
+        }
+        // Get saved local data; insert content into page
+        function loadQRLocal() {
+            const container = document.getElementById('codes-container');
+            let data = localStorage.getItem('QRItems');
+
+            let qrJSON = data ? JSON.parse(data) : {};
+            const keys = Object.keys(qrJSON);
+            keys.forEach(key => {
+                addQRItem(qrJSON[key], container);
+            });
+        }
+
+        // Put data in qr items in {}, for which to write to storage
+        function collectQRJSON() {
+            let qrJSON = {};
+            const qrItems = Array.from(document.getElementsByClassName('qr-item'));
+
+            qrItems.forEach((item, i) => {
+                const title = item.querySelector('input');
+                const text  = item.querySelector('textarea');
+                const img   = item.querySelector('img');
+
+                const entry = {
+                    "title": title ? title.value : '',
+                    "text" : text.textContent,
+                    "img"  : img.src
+                }
+
+                qrJSON[i] = entry;
+            });
+            return qrJSON;
+        }
+
+        window.onload = () => {
+            setupUpload();
+            loadQRLocal(); // Restore created and saved codes and texts
+        }
+
+        // Before page exit, save data in qr-item(s) in local storage
+        window.addEventListener('beforeunload', () => {
+            let qrJSON = collectQRJSON();
+            localStorage.setItem('QRItems', JSON.stringify(qrJSON));
+        });
+    </script>
+</body>
+</html>
